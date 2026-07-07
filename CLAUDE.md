@@ -12,9 +12,12 @@ Documentação existente: `README.md` (templates), `AGENTE.md` (uso do card_agen
 
 ## Comandos
 
-Não há suite de testes nem linter configurados. Única dependência: `genanki`. Usar o Python do venv:
+Dependência do core: só `genanki`; dev: `pytest` (`requirements-dev.txt`). Usar o Python do venv:
 
 ```powershell
+# Testes (rodar após qualquer mudança em anki_toolkit/ ou nos scripts)
+.\.venv\Scripts\python.exe -m pytest tests/ -v
+
 # Gerar o .apkg de exemplo com os 5 note types (após editar templates/CSS)
 .\.venv\Scripts\python.exe build_apkg.py
 
@@ -25,13 +28,26 @@ Não há suite de testes nem linter configurados. Única dependência: `genanki`
 # Reconstruir .apkg/.tsv de um JSON já gerado, SEM chamar o modelo de novo
 # (é assim que se testa mudança de template com cards reais)
 .\.venv\Scripts\python.exe rebuild_from_json.py --json output/<slug>.json
+
+# Orquestração: delegar tarefa de código a um modelo Ollama cloud
+# (o usuário tem saldo ilimitado no Ollama; preferir isso a gastar tokens
+#  Anthropic em geração longa de código bem especificado — Claude escreve a
+#  spec num arquivo, o modelo executa, Claude revisa e integra)
+.\.venv\Scripts\python.exe tools\ollama_worker.py --model kimi-k2.7-code:cloud --prompt-file spec.txt --out resultado.py
 ```
+
+Modelos cloud bons para código: `kimi-k2.7-code:cloud`, `gpt-oss:120b-cloud`, `gemma4:31b-cloud` (até 3 em paralelo; o worker tem retry porque o gateway cloud dá 502 esporádico).
 
 Saídas vão para `output/`: `<slug>.apkg`, `<slug>__<tipo>.tsv` (um por note type, com cabeçalho `#notetype/#deck/#tags`) e `<slug>.json` (cards crus, editáveis).
 
 ## Arquitetura
 
-**`anki_models.py` é a fonte única de verdade** dos 5 note types (genanki), consumida por `build_apkg.py`, `card_agent.py` e `rebuild_from_json.py`:
+**O pacote `anki_toolkit/` é a fonte única de verdade**; os scripts da raiz são invólucros finos de CLI:
+- `anki_toolkit/models.py` — os 5 note types genanki (IDs fixos). `anki_models.py` na raiz é só um shim de compatibilidade que re-exporta daqui.
+- `anki_toolkit/llm.py` — cliente Ollama (`call_ollama`, com `fmt=None` para texto livre) e `extract_json`. Levanta exceções (`OllamaError`/`ValueError`); quem chama `sys.exit` é o script de CLI.
+- `anki_toolkit/outputs.py` — conversão (`card_to_fields`), TSV, APKG e o JSON intermediário com `"schema": 1` (contrato central do projeto; evoluir só com campos opcionais). `deck_id()` usa crc32 (determinístico — nunca voltar para `hash()`, que é salgado por processo).
+
+Note types definidos em `anki_toolkit/models.py`:
 
 | chave | Note type no Anki | campos |
 |---|---|---|

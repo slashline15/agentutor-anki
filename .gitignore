@@ -1,2 +1,5 @@
 .venv/
 output/*.tsv
+__pycache__/
+*.pyc
+.pytest_cache/

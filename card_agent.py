@@ -2,7 +2,8 @@
 card_agent.py — Gera flashcards de Anki com modelos Ollama (local ou cloud),
 aplicando boas técnicas de memorização (princípios de Woźniak + recordação ativa).
 
-Saídas: .apkg pronto, CSV/TSV por note type e um JSON intermediário.
+Saídas: .apkg pronto, CSV/TSV por note type e um JSON intermediário (schema 1).
+A lógica compartilhada vive no pacote anki_toolkit/ (llm, outputs, models).
 
 Exemplos:
   # a partir de um tópico
@@ -16,20 +17,15 @@ Exemplos:
   python card_agent.py --topic "Mitose" --model gpt-oss:120b-cloud
 """
 import argparse
-import json
-import re
 import sys
-import urllib.request
-import urllib.error
-from datetime import datetime
 from pathlib import Path
 
-import genanki
-import anki_models
+from anki_toolkit import llm, outputs
+from anki_toolkit.llm import DEFAULT_HOST, DEFAULT_MODEL
+# Re-exports de compatibilidade (rebuild_from_json antigo importava daqui)
+from anki_toolkit.outputs import slugify, write_tsv  # noqa: F401
 
 BASE = Path(__file__).resolve().parent
-DEFAULT_MODEL = "gpt-oss:120b-cloud"
-DEFAULT_HOST = "http://localhost:11434"
 
 SYSTEM_PROMPT = """Você é um especialista em criar flashcards para Anki otimizados para \
 memorização de longo prazo (repetição espaçada). Você domina e APLICA os princípios de \
@@ -79,108 +75,6 @@ Responda EXATAMENTE neste formato JSON (sem nada além do JSON):
 }"""
 
 
-# ----------------------------------------------------------------------------- Ollama
-def call_ollama(host, model, system, user, timeout):
-    body = {
-        "model": model,
-        "messages": [
-            {"role": "system", "content": system},
-            {"role": "user", "content": user},
-        ],
-        "stream": False,
-        "format": "json",
-        "think": False,
-        "options": {"temperature": 0.4},
-    }
-    data = json.dumps(body).encode("utf-8")
-    req = urllib.request.Request(
-        host.rstrip("/") + "/api/chat", data=data,
-        headers={"Content-Type": "application/json"})
-    try:
-        with urllib.request.urlopen(req, timeout=timeout) as r:
-            resp = json.loads(r.read().decode("utf-8"))
-    except urllib.error.URLError as e:
-        sys.exit(f"[erro] Não consegui falar com o Ollama em {host}: {e}\n"
-                 f"        Verifique se o servidor está ativo (ollama serve) e o modelo existe.")
-    return resp.get("message", {}).get("content", "")
-
-
-def extract_json(text):
-    text = (text or "").strip()
-    try:
-        return json.loads(text)
-    except json.JSONDecodeError:
-        pass
-    s, e = text.find("{"), text.rfind("}")
-    if s != -1 and e != -1 and e > s:
-        try:
-            return json.loads(text[s:e + 1])
-        except json.JSONDecodeError:
-            pass
-    sys.exit("[erro] O modelo não retornou JSON válido. Início da resposta:\n"
-             + text[:600])
-
-
-# ----------------------------------------------------------------------------- helpers
-def nl2br(s):
-    return str(s or "").replace("\r\n", "\n").replace("\n", "<br>")
-
-
-def slugify(s):
-    s = re.sub(r"[^\w\s-]", "", str(s).lower(), flags=re.UNICODE).strip()
-    return re.sub(r"[\s_-]+", "-", s) or "cards"
-
-
-def has_cloze(s):
-    return bool(re.search(r"\{\{c\d+::", str(s or "")))
-
-
-def card_to_fields(card):
-    """Converte 1 card do JSON nos campos do note type. Retorna (tipo, [campos]) ou None."""
-    t = card.get("type", "qa")
-    ex = nl2br(card.get("extra", ""))
-    if t == "qa":
-        front, back = card.get("front", ""), card.get("back", "")
-        if not front or not back:
-            return None
-        return "qa", [nl2br(front), nl2br(back), ex]
-    if t == "cloze":
-        text = card.get("text", "")
-        if not has_cloze(text):
-            return None
-        return "cloze", [nl2br(text), ex]
-    if t == "code_output":
-        code, ans = card.get("code", ""), card.get("answer", "")
-        if not code or ans == "":
-            return None
-        return "code_output", [nl2br(code), nl2br(ans), ex]
-    if t == "code_write":
-        front, ans = card.get("front", ""), card.get("answer", "")
-        if not front or not ans:
-            return None
-        return "code_write", [nl2br(front), nl2br(ans), ex]
-    if t == "code_cloze":
-        code = card.get("code", "")
-        if not has_cloze(code):
-            return None
-        return "code_cloze", [nl2br(code), ex]
-    return None
-
-
-def write_tsv(path, model_name, deck, tags, rows):
-    def san(x):
-        return str(x).replace("\t", "    ").replace("\r", "").replace("\n", "<br>")
-    lines = [
-        "#separator:tab", "#html:true",
-        f"#notetype:{model_name}", f"#deck:{deck}",
-        f"#tags:{' '.join(tags)}",
-    ]
-    for r in rows:
-        lines.append("\t".join(san(c) for c in r))
-    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
-
-
-# ----------------------------------------------------------------------------- main
 def main():
     ap = argparse.ArgumentParser(description="Gera flashcards de Anki via Ollama.")
     src = ap.add_mutually_exclusive_group(required=True)
@@ -212,8 +106,11 @@ def main():
             .replace("__CONTENT__", content[:12000]))
 
     print(f"[1/4] Gerando ~{args.num} cards com '{args.model}'...")
-    raw = call_ollama(args.host, args.model, SYSTEM_PROMPT, user, args.timeout)
-    data = extract_json(raw)
+    try:
+        raw = llm.call_ollama(args.host, args.model, SYSTEM_PROMPT, user, args.timeout)
+        data = llm.extract_json(raw)
+    except (llm.OllamaError, ValueError) as e:
+        sys.exit(f"[erro] {e}")
 
     deck_name = args.deck or data.get("deck") or default_deck or "Ollama Cards"
     cards = data.get("cards", [])
@@ -223,7 +120,7 @@ def main():
     # converter e agrupar por tipo
     by_type, skipped, kept = {}, 0, []
     for c in cards:
-        conv = card_to_fields(c)
+        conv = outputs.card_to_fields(c)
         if conv is None:
             skipped += 1
             continue
@@ -239,32 +136,18 @@ def main():
 
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
-    slug = slugify(deck_name)
+    slug = outputs.slugify(deck_name)
     formats = {f.strip() for f in args.formats.split(",") if f.strip()}
     tags = ["gerado-ollama", slug]
 
-    # JSON intermediário
     if "json" in formats:
-        (out / f"{slug}.json").write_text(
-            json.dumps({"deck": deck_name, "model": args.model,
-                        "gerado_em": datetime.now().isoformat(timespec="seconds"),
-                        "cards": kept}, ensure_ascii=False, indent=2),
-            encoding="utf-8")
+        outputs.write_json(out / f"{slug}.json", deck_name, args.model, kept)
 
-    # CSV/TSV por tipo
     if "csv" in formats:
-        for t, rows in by_type.items():
-            write_tsv(out / f"{slug}__{t}.tsv", anki_models.MODEL_NAMES[t],
-                      deck_name, tags, rows)
+        outputs.write_tsvs(out, slug, deck_name, tags, by_type)
 
-    # APKG unificado
     if "apkg" in formats:
-        models = anki_models.build_models()
-        deck = genanki.Deck(anki_models.DECK_DEFAULT + (abs(hash(slug)) % 100000), deck_name)
-        for t, rows in by_type.items():
-            for fields in rows:
-                deck.add_note(genanki.Note(model=models[t], fields=fields, tags=tags))
-        genanki.Package(deck).write_to_file(str(out / f"{slug}.apkg"))
+        outputs.write_apkg(out / f"{slug}.apkg", deck_name, tags, by_type)
 
     print(f"[3/4] Baralho: '{deck_name}'  (tags: {', '.join(tags)})")
     print(f"[4/4] Arquivos em: {out}")
