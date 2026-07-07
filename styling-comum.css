@@ -1,0 +1,170 @@
+/* ============================================================
+   STYLING COMUM — cole este CSS na aba "Styling" dos 3 note types
+   Tema: terminal escuro estilo One Dark
+   ============================================================ */
+
+* { box-sizing: border-box; }
+
+.card {
+  font-family: 'Ubuntu', Arial, sans-serif;
+  font-size: 16px;
+  color: #333;
+  background-color: #f5f5f5;
+  text-align: center;
+  padding: 10px;
+}
+
+/* ---------- Janela do terminal ---------- */
+.term {
+  max-width: 820px;
+  margin: 0 auto 15px;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 18px rgba(0,0,0,.25);
+  background-color: #282c34;
+  text-align: left;
+}
+
+.term-title {
+  background-color: #21252b;
+  color: #cfd3da;
+  padding: 8px 12px;
+  font-size: 13px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.win-controls { display: flex; gap: 8px; }
+.dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+.dot.red { background:#ff5f57; }
+.dot.yellow { background:#ffbd2e; }
+.dot.green { background:#28c841; }
+
+.term-menu {
+  background-color: #2d313a;
+  padding: 5px 12px;
+  font-size: 13px;
+  color: #9aa2b1;
+}
+.term-menu span { margin-right: 15px; }
+
+.term-body {
+  padding: 15px;
+  font-family: 'Ubuntu Mono', 'JetBrains Mono', Consolas, Monaco, monospace;
+  color: #abb2bf;
+}
+
+.prompt-line { margin-bottom: 12px; font-size: 15px; word-break: break-word; }
+.p-user { color:#98c379; font-weight:bold; }
+.p-at,  .p-colon, .p-dollar { color:#abb2bf; }
+.p-host { color:#61afef; font-weight:bold; }
+.p-path { color:#e5c07b; }
+.p-dollar { margin-right: 6px; }
+
+/* ---------- Bloco de código ---------- */
+.code-wrap {
+  display: flex;
+  background-color: #21252b;
+  border-radius: 6px;
+  overflow-x: auto;
+  margin-bottom: 12px;
+}
+.gutter {
+  flex: 0 0 auto;
+  padding: 10px 8px;
+  text-align: right;
+  color: #4b525e;
+  background: #1c2027;
+  user-select: none;
+  font-size: 14px;
+  line-height: 1.55;
+  border-right: 1px solid #30353f;
+}
+.gutter div { padding: 0 4px; }
+.code {
+  flex: 1;
+  white-space: pre-wrap;
+  line-height: 1.55;
+  font-size: 14px;
+  padding: 10px 12px;
+  tab-size: 4;
+}
+
+/* ---------- Tokens de sintaxe ---------- */
+.tok-keyword   { color:#c678dd; font-weight:bold; }
+.tok-builtin   { color:#61afef; }
+.tok-string    { color:#98c379; }
+.tok-number    { color:#d19a66; }
+.tok-comment   { color:#5c6370; font-style:italic; }
+.tok-decorator { color:#e5c07b; }
+
+/* ---------- Cloze (frente: lacuna) ---------- */
+.cloze, .cloze b {
+  background-color: rgba(255,204,0,.12);
+  border: 1px dashed #ffcc00;
+  padding: 1px 6px;
+  border-radius: 4px;
+  color: #ffcc00 !important;
+  font-weight: bold;
+}
+
+/* ---------- Campo de digitação (frente) ---------- */
+#typeans {
+  width: 100%;
+  max-width: 820px;
+  padding: 9px 12px;
+  font-family: 'Ubuntu Mono', Consolas, Monaco, monospace;
+  font-size: 16px;
+  background-color: #21252b;
+  color: #e6e6e6;
+  border: 2px solid #4584b6;
+  border-radius: 6px;
+  outline: none;
+}
+#typeans:focus { border-color:#61afef; box-shadow:0 0 0 3px rgba(97,175,239,.25); }
+
+/* ---------- Saída / comparação ---------- */
+.output {
+  background-color: #1c2027;
+  border-radius: 6px;
+  padding: 14px;
+  margin-top: 6px;
+}
+.out-header { color:#61afef; font-weight:bold; margin-bottom:10px; font-size:15px; }
+.out-row { margin-bottom: 6px; line-height: 1.5; }
+.out-label { color:#7f8896; display:inline-block; min-width:96px; vertical-align:top; }
+
+/* Comparação NATIVA do {{type:}} do Anki (verso) */
+code#typeans {
+  display: inline-block;
+  background: transparent;
+  font-size: 15px;
+  white-space: pre-wrap;
+  text-align: left;
+}
+.typeGood   { color:#98c379; background:rgba(152,195,121,.12); }
+.typeBad    { color:#e06c75; background:rgba(224,108,117,.18); text-decoration:underline; }
+.typeMissed { color:#e5c07b; background:rgba(229,192,123,.18); }
+
+/* ---------- Notas / explicação ---------- */
+.notes {
+  max-width: 820px;
+  margin: 15px auto 0;
+  padding: 14px 16px;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0,0,0,.1);
+  text-align: left;
+}
+.notes h3 {
+  color:#4584b6; margin:0 0 8px;
+  border-bottom:1px solid #eee; padding-bottom:6px; font-size:16px;
+}
+.notes code { background:#eef1f5; padding:1px 5px; border-radius:4px; font-family:Consolas,monospace; }
+
+/* ---------- Modo noturno ---------- */
+.nightMode.card { background-color:#16181d; color:#e6e6e6; }
+.nightMode .notes { background-color:#262a31; color:#e6e6e6; box-shadow:none; }
+.nightMode .notes h3 { color:#61afef; border-bottom-color:#333; }
+.nightMode .notes code { background:#1c2027; color:#e6e6e6; }

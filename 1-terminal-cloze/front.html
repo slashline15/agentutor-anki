@@ -1,0 +1,98 @@
+<!-- ============ NOTE TYPE: 1) Terminal Python (Cloze) — FRENTE ============ -->
+<div class="term">
+  <div class="term-title">
+    <span>python@dev:~</span>
+    <div class="win-controls"><span class="dot green"></span><span class="dot yellow"></span><span class="dot red"></span></div>
+  </div>
+  <div class="term-menu"><span>File</span><span>Edit</span><span>View</span><span>Run</span><span>Terminal</span><span>Help</span></div>
+  <div class="term-body">
+    <div class="prompt-line">
+      <span class="p-user">python@dev</span><span class="p-at">@</span><span class="p-host">localhost</span><span class="p-colon">:</span><span class="p-path">~</span><span class="p-dollar">$</span>python code.py
+    </div>
+    <div class="code-wrap">
+      <div class="gutter" id="gutter"></div>
+      <div class="code" id="code">{{cloze:Front}}</div>
+    </div>
+  </div>
+</div>
+
+<div style="max-width:820px;margin:0 auto;">{{type:cloze:Front}}</div>
+
+<script>
+(function () {
+  var PY_KW = ['False','None','True','and','as','assert','async','await','break','case','catch','class','const','continue','def','default','del','delete','do','elif','else','except','export','extends','false','finally','for','from','function','global','if','import','in','instanceof','is','lambda','let','new','nonlocal','not','null','of','or','pass','raise','return','static','super','switch','this','throw','true','try','typeof','undefined','var','void','while','with','yield'];
+  var PY_BI = ['abs','alert','all','any','Array','bool','Boolean','console','dict','document','enumerate','filter','float','format','frozenset','input','int','isNaN','JSON','len','list','map','Math','max','min','Number','Object','open','parseFloat','parseInt','print','prompt','range','repr','reversed','round','set','sorted','str','String','sum','tuple','type','window','zip'];
+
+  function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  function buildRe(){
+    return new RegExp(
+      '(#[^\\n]*)|' +
+      '("""[\\s\\S]*?"""|\'\'\'[\\s\\S]*?\'\'\')|' +
+      '("(?:\\\\.|[^"\\\\])*"|\'(?:\\\\.|[^\'\\\\])*\')|' +
+      '\\b(\\d+\\.?\\d*)\\b|' +
+      '(@[A-Za-z_]\\w*)|' +
+      '\\b(' + PY_KW.join('|') + ')\\b|' +
+      '\\b(' + PY_BI.join('|') + ')\\b', 'g');
+  }
+
+  function tokenize(code){
+    var re = buildRe(), out = '', last = 0, m;
+    while ((m = re.exec(code)) !== null){
+      out += esc(code.slice(last, m.index));
+      if (m[1])      out += '<span class="tok-comment">'   + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-string">'    + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-string">'    + esc(m[3]) + '</span>';
+      else if (m[4]) out += '<span class="tok-number">'    + esc(m[4]) + '</span>';
+      else if (m[5]) out += '<span class="tok-decorator">' + esc(m[5]) + '</span>';
+      else if (m[6]) out += '<span class="tok-keyword">'   + esc(m[6]) + '</span>';
+      else if (m[7]) out += '<span class="tok-builtin">'   + esc(m[7]) + '</span>';
+      last = re.lastIndex;
+    }
+    return out + esc(code.slice(last));
+  }
+
+  // Destaca apenas os nós de texto FORA dos clozes (que o Anki já transformou em <span class="cloze">)
+  function highlightPreservingCloze(el){
+    var walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, {
+      acceptNode: function(n){
+        return (n.parentElement && n.parentElement.closest('.cloze'))
+          ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT;
+      }
+    });
+    var nodes = [], n;
+    while ((n = walker.nextNode())) nodes.push(n);
+    nodes.forEach(function(node){
+      if (!node.nodeValue.trim() && node.nodeValue.indexOf('\n') === -1) return;
+      var span = document.createElement('span');
+      span.innerHTML = tokenize(node.nodeValue);
+      node.parentNode.replaceChild(span, node);
+    });
+  }
+
+  function lineCount(el){
+    var brs = (el.innerHTML.match(/<br\s*\/?>/gi) || []).length;
+    var nls = (el.textContent.match(/\n/g) || []).length;
+    return Math.max(brs, nls) + 1;
+  }
+
+  function buildGutter(el, gutter){
+    var n = lineCount(el), html = '';
+    for (var i = 1; i <= n; i++) html += '<div>' + i + '</div>';
+    gutter.innerHTML = html;
+  }
+
+  function run(){
+    var code = document.getElementById('code');
+    var gutter = document.getElementById('gutter');
+    if (!code) return;
+    buildGutter(code, gutter);
+    highlightPreservingCloze(code);
+    var t = document.getElementById('typeans');
+    if (t) { try { t.focus(); } catch (e) {} }
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run);
+  else run();
+})();
+</script>

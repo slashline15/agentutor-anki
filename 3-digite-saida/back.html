@@ -1,0 +1,87 @@
+<!-- ===== NOTE TYPE: 3) Digite a Saída (Basic) — VERSO ===== -->
+<div class="term">
+  <div class="term-title">
+    <span>python@dev:~ — qual a saída?</span>
+    <div class="win-controls"><span class="dot green"></span><span class="dot yellow"></span><span class="dot red"></span></div>
+  </div>
+  <div class="term-menu"><span>File</span><span>Edit</span><span>View</span><span>Run</span><span>Terminal</span><span>Help</span></div>
+  <div class="term-body">
+    <div class="prompt-line">
+      <span class="p-user">python@dev</span><span class="p-at">@</span><span class="p-host">localhost</span><span class="p-colon">:</span><span class="p-path">~</span><span class="p-dollar">$</span>python code.py
+    </div>
+    <div class="code-wrap">
+      <div class="gutter" id="gutter"></div>
+      <div class="code" id="code">{{Codigo}}</div>
+    </div>
+
+    <div class="output">
+      <div class="out-header">&gt;&gt;&gt; Comparação da saída</div>
+      <div class="out-row"><span class="out-label">Você:</span> {{type:Saida}}</div>
+      <div class="out-row"><span class="out-label">Correto:</span> <span class="tok-string">{{Saida}}</span></div>
+    </div>
+  </div>
+</div>
+
+{{#Notas}}
+<div class="notes"><h3>Notas</h3><div>{{Notas}}</div></div>
+{{/Notas}}
+
+<script>
+(function () {
+  var PY_KW = ['False','None','True','and','as','assert','async','await','break','case','catch','class','const','continue','def','default','del','delete','do','elif','else','except','export','extends','false','finally','for','from','function','global','if','import','in','instanceof','is','lambda','let','new','nonlocal','not','null','of','or','pass','raise','return','static','super','switch','this','throw','true','try','typeof','undefined','var','void','while','with','yield'];
+  var PY_BI = ['abs','alert','all','any','Array','bool','Boolean','console','dict','document','enumerate','filter','float','format','frozenset','input','int','isNaN','JSON','len','list','map','Math','max','min','Number','Object','open','parseFloat','parseInt','print','prompt','range','repr','reversed','round','set','sorted','str','String','sum','tuple','type','window','zip'];
+
+  function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  function buildRe(){
+    return new RegExp(
+      '(#[^\\n]*)|' +
+      '("""[\\s\\S]*?"""|\'\'\'[\\s\\S]*?\'\'\')|' +
+      '("(?:\\\\.|[^"\\\\])*"|\'(?:\\\\.|[^\'\\\\])*\')|' +
+      '\\b(\\d+\\.?\\d*)\\b|' +
+      '(@[A-Za-z_]\\w*)|' +
+      '\\b(' + PY_KW.join('|') + ')\\b|' +
+      '\\b(' + PY_BI.join('|') + ')\\b', 'g');
+  }
+
+  function tokenize(code){
+    var re = buildRe(), out = '', last = 0, m;
+    while ((m = re.exec(code)) !== null){
+      out += esc(code.slice(last, m.index));
+      if (m[1])      out += '<span class="tok-comment">'   + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="tok-string">'    + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="tok-string">'    + esc(m[3]) + '</span>';
+      else if (m[4]) out += '<span class="tok-number">'    + esc(m[4]) + '</span>';
+      else if (m[5]) out += '<span class="tok-decorator">' + esc(m[5]) + '</span>';
+      else if (m[6]) out += '<span class="tok-keyword">'   + esc(m[6]) + '</span>';
+      else if (m[7]) out += '<span class="tok-builtin">'   + esc(m[7]) + '</span>';
+      last = re.lastIndex;
+    }
+    return out + esc(code.slice(last));
+  }
+
+  function getCodeText(el){
+    var html = el.innerHTML
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/<\/div>\s*<div>/gi, '\n')
+      .replace(/<\/?div[^>]*>/gi, '');
+    var tmp = document.createElement('div');
+    tmp.innerHTML = html;
+    return tmp.textContent;
+  }
+
+  function run(){
+    var code = document.getElementById('code');
+    var gutter = document.getElementById('gutter');
+    if (!code) return;
+    var text = getCodeText(code);
+    code.innerHTML = tokenize(text);
+    var n = text.split('\n').length, g = '';
+    for (var i = 1; i <= n; i++) g += '<div>' + i + '</div>';
+    gutter.innerHTML = g;
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run);
+  else run();
+})();
+</script>

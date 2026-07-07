@@ -1,0 +1,84 @@
+{
+  "deck": "JavaScript::Basico",
+  "model": "gpt-oss:120b-cloud",
+  "gerado_em": "2026-06-30T15:03:16",
+  "cards": [
+    {
+      "type": "qa",
+      "fields": [
+        "Qual a diferença entre as declarações let e const em JavaScript?",
+        "let permite que o valor seja reatribuído, enquanto const cria uma constante cujo valor não pode ser alterado após a inicialização.",
+        "let tem escopo de bloco e pode ser reatribuído; const também tem escopo de bloco, mas não permite reatribuição."
+      ]
+    },
+    {
+      "type": "cloze",
+      "fields": [
+        "Em JavaScript, a palavra‑chave {{c1::var}} declara uma variável com escopo de função.",
+        "Variáveis declaradas com var são içadas (hoisted) e têm escopo de função, diferente de let/const."
+      ]
+    },
+    {
+      "type": "code_output",
+      "fields": [
+        "console.log(5 + \"5\");",
+        "55",
+        "O operador + concatena quando um dos operandos é string."
+      ]
+    },
+    {
+      "type": "code_write",
+      "fields": [
+        "Escreva uma linha de código JavaScript que declare uma constante chamada PI com o valor 3.14.",
+        "const PI = 3.14;",
+        "Constantes devem ser inicializadas no momento da declaração."
+      ]
+    },
+    {
+      "type": "code_cloze",
+      "fields": [
+        "console.log(10 {{c1::-}} 4);",
+        "O operador de subtração (-) devolve a diferença entre os operandos."
+      ]
+    },
+    {
+      "type": "qa",
+      "fields": [
+        "A que tipo de dado pertence o valor true em JavaScript?",
+        "Boolean",
+        "Boolean representa valores verdadeiros ou falsos."
+      ]
+    },
+    {
+      "type": "cloze",
+      "fields": [
+        "O operador de igualdade estrita em JavaScript é {{c1::===}}.",
+        "=== compara valor e tipo, ao contrário de ==."
+      ]
+    },
+    {
+      "type": "code_output",
+      "fields": [
+        "console.log(typeof null);",
+        "object",
+        "Por razões históricas, typeof null retorna \"object\"."
+      ]
+    },
+    {
+      "type": "code_write",
+      "fields": [
+        "Escreva uma expressão JavaScript que use o operador ternário para retornar \"par\" se a variável n for par, e \"ímpar\" caso contrário.",
+        "n % 2 === 0 ? \"par\" : \"ímpar\";",
+        "O operador % obtém o resto da divisão."
+      ]
+    },
+    {
+      "type": "qa",
+      "fields": [
+        "Qual será a saída de console.log(2 ** 3) em JavaScript?",
+        "8",
+        "** é o operador de exponenciação (2 elevado a 3)."
+      ]
+    }
+  ]
+}

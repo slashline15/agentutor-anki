@@ -1,0 +1,52 @@
+{
+  "deck": "Python Slicing",
+  "model": "qwen3.5:9b",
+  "gerado_em": "2026-06-30T14:56:33",
+  "cards": [
+    {
+      "type": "cloze",
+      "fields": [
+        "Em Python, para obter os dois primeiros elementos da lista {{c1::[0, 1]}} usando fatiamento (slicing), a sintaxe é: my_list[:2].",
+        "O slice [:n] pega do início até o índice n-1."
+      ]
+    },
+    {
+      "type": "cloze",
+      "fields": [
+        "{{c1::[-1, -2]]}} são os dois últimos elementos de uma lista fatiada com my_list[-2:].",
+        "O slice [-n:] pega do índice n-1 até o fim da lista."
+      ]
+    },
+    {
+      "type": "code_output",
+      "fields": [
+        "lista = [0, 1, 2, 3]<br>descobrir = lista[1:4] <br>print(descobrir)",
+        "[1, 2, 3]",
+        "O slice inicia no índice 1 e vai até o anterior ao 4 (exclusivo)."
+      ]
+    },
+    {
+      "type": "code_write",
+      "fields": [
+        "Escreva um código que crie uma lista chamada 'numeros' com os valores [5, 6] fatiando a sequência de 3 a 7.",
+        "numeros = list(range(3, 8))[2:4]",
+        "range(3,8) gera [3,4,5,6,7]. Fatia do índice 2 (valor 5) até o anterior ao 4."
+      ]
+    },
+    {
+      "type": "code_cloze",
+      "fields": [
+        "lista = ['a', 'b', 'c']<br>print(lista[{{c1::-3}}:]) <br># Imprime a lista inteira começando do início.",
+        "Usar um número negativo no início equivale ao índice 0."
+      ]
+    },
+    {
+      "type": "qa",
+      "fields": [
+        "O que é retornado pelo fatiamento 'meu_lista[1:2]' se a lista tiver mais de dois elementos?",
+        "Uma nova lista contendo apenas o elemento no índice 1.",
+        "Slicing sempre retorna uma cópia, nunca altera a original."
+      ]
+    }
+  ]
+}
