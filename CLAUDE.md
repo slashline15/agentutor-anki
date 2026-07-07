@@ -25,6 +25,9 @@ Dependência do core: só `genanki`; dev: `pytest` (`requirements-dev.txt`). Usa
 .\.venv\Scripts\python.exe card_agent.py --topic "List comprehensions" -n 12
 .\.venv\Scripts\python.exe card_agent.py --file material.md -n 25 --deck "Estudos::Redes"
 
+# --push: adiciona direto no Anki aberto via AnkiConnect (fallback .apkg se fechado)
+.\.venv\Scripts\python.exe card_agent.py --topic "..." --push
+
 # Reconstruir .apkg/.tsv de um JSON já gerado, SEM chamar o modelo de novo
 # (é assim que se testa mudança de template com cards reais)
 .\.venv\Scripts\python.exe rebuild_from_json.py --json output/<slug>.json
@@ -46,6 +49,7 @@ Saídas vão para `output/`: `<slug>.apkg`, `<slug>__<tipo>.tsv` (um por note ty
 - `anki_toolkit/models.py` — os 5 note types genanki (IDs fixos). `anki_models.py` na raiz é só um shim de compatibilidade que re-exporta daqui.
 - `anki_toolkit/llm.py` — cliente Ollama (`call_ollama`, com `fmt=None` para texto livre) e `extract_json`. Levanta exceções (`OllamaError`/`ValueError`); quem chama `sys.exit` é o script de CLI.
 - `anki_toolkit/outputs.py` — conversão (`card_to_fields`), TSV, APKG e o JSON intermediário com `"schema": 1` (contrato central do projeto; evoluir só com campos opcionais). `deck_id()` usa crc32 (determinístico — nunca voltar para `hash()`, que é salgado por processo).
+- `anki_toolkit/bridge.py` — AnkiConnect (addon 2055492159, HTTP em `localhost:8765`, só responde com o Anki aberto). `push_cards()` checa note types (`modelNames`), pula duplicatas (`canAddNotes`) — duplicata total é resultado normal, NÃO erro (erro dispararia o fallback .apkg no CLI e o usuário importaria duplicado). `_post` é separado de propósito para os testes fazerem monkeypatch. `tools/novo_baralho.ps1` + atalho na área de trabalho usam o `--push`.
 
 Note types definidos em `anki_toolkit/models.py`:
 

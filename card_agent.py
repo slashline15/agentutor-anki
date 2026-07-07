@@ -20,7 +20,7 @@ import argparse
 import sys
 from pathlib import Path
 
-from anki_toolkit import llm, outputs
+from anki_toolkit import bridge, llm, outputs
 from anki_toolkit.llm import DEFAULT_HOST, DEFAULT_MODEL
 # Re-exports de compatibilidade (rebuild_from_json antigo importava daqui)
 from anki_toolkit.outputs import slugify, write_tsv  # noqa: F401
@@ -88,6 +88,9 @@ def main():
     ap.add_argument("--formats", default="apkg,csv", help="apkg,csv,json (separados por vírgula).")
     ap.add_argument("--lang", default="português", help="Idioma dos cards.")
     ap.add_argument("--timeout", type=int, default=900, help="Timeout da chamada (s).")
+    ap.add_argument("--push", action="store_true",
+                    help="Adiciona direto no Anki aberto via AnkiConnect "
+                         "(se o Anki estiver fechado, cai para .apkg).")
     args = ap.parse_args()
 
     if args.file:
@@ -139,6 +142,16 @@ def main():
     slug = outputs.slugify(deck_name)
     formats = {f.strip() for f in args.formats.split(",") if f.strip()}
     tags = ["gerado-ollama", slug]
+
+    if args.push:
+        try:
+            res = bridge.push_cards(deck_name, tags, by_type)
+            print(f"[push] {res['added']} adicionados ao Anki, "
+                  f"{res['skipped']} pulados (duplicados/erro).")
+        except bridge.AnkiConnectError as e:
+            print(f"[push] {e}")
+            print("[push] Caindo para .apkg — importe manualmente depois.")
+            formats.add("apkg")
 
     if "json" in formats:
         outputs.write_json(out / f"{slug}.json", deck_name, args.model, kept)
