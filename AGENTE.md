@@ -53,3 +53,45 @@ A partir de um material (apostila, anotações):
 
 O agente escolhe o tipo automaticamente; os tipos `code_*` só aparecem quando o
 conteúdo é de programação.
+
+## Adicionar direto no Anki (`--push`)
+
+Com o Anki **aberto** (e o addon AnkiConnect instalado), a flag `--push` adiciona
+os cards direto na coleção — sem gerar/importar `.apkg`:
+
+```powershell
+.\.venv\Scripts\python.exe card_agent.py --topic "Verbos irregulares" -n 10 --push
+```
+
+- Anki aberto → cards entram na hora; duplicatas são puladas automaticamente.
+- Anki fechado → cai para o fluxo antigo (gera `.apkg` em `output/`) e avisa.
+
+**Atalho "Novo baralho Anki"** (área de trabalho): clique → digite o **tópico**
+numa caixa de texto → o agente gera e adiciona sozinho → popup com o resultado.
+
+## De PDF para baralho (`ingest.py`)
+
+Converte PDF em markdown limpo (pasta `library/`), pronto para virar cards:
+
+```powershell
+.\.venv\Scripts\python.exe ingest.py apostila.pdf
+.\.venv\Scripts\python.exe card_agent.py --file library\apostila.md --push
+```
+
+| Tipo de PDF | Rota (automática) | Observações |
+|---|---|---|
+| Texto embutido | `digital` — extração direta, sem OCR | Rápida |
+| Escaneado | `scanned` — docling + EasyOCR em lotes | Usa GPU se houver; pode demorar |
+| Qualquer um | `--route ollama` — modelo multimodal local | Fallback sem docling/torch |
+
+Dependências (opcionais, só para quem usa PDFs):
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install -r requirements-ingest.txt
+```
+
+Para OCR na GPU, instale o torch CUDA antes (comando no comentário do próprio
+`requirements-ingest.txt`).
+
+**Materiais grandes:** o `card_agent` divide o conteúdo por seções e faz várias
+chamadas ao modelo automaticamente — nada muda no comando.

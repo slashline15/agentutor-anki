@@ -21,7 +21,10 @@ import sys
 from pathlib import Path
 
 from anki_toolkit import bridge, llm, outputs
+from anki_toolkit.ingest import split_sections
 from anki_toolkit.llm import DEFAULT_HOST, DEFAULT_MODEL
+
+CHUNK_LIMIT = 12000  # chars por chamada; acima disso o material é dividido
 # Re-exports de compatibilidade (rebuild_from_json antigo importava daqui)
 from anki_toolkit.outputs import slugify, write_tsv  # noqa: F401
 
@@ -103,20 +106,40 @@ def main():
     if not content:
         sys.exit("[erro] Conteúdo vazio.")
 
-    user = (USER_TEMPLATE
-            .replace("__N__", str(args.num))
-            .replace("__LANG__", args.lang)
-            .replace("__CONTENT__", content[:12000]))
+    # material maior que o limite: divide por seções e gera em várias chamadas
+    chunks = split_sections(content, limit=CHUNK_LIMIT)
+    if not chunks:
+        sys.exit("[erro] Conteúdo vazio.")
+    per_chunk = max(2, -(-args.num // len(chunks)))  # ceil(num/chunks)
 
-    print(f"[1/4] Gerando ~{args.num} cards com '{args.model}'...")
-    try:
-        raw = llm.call_ollama(args.host, args.model, SYSTEM_PROMPT, user, args.timeout)
-        data = llm.extract_json(raw)
-    except (llm.OllamaError, ValueError) as e:
-        sys.exit(f"[erro] {e}")
+    if len(chunks) == 1:
+        print(f"[1/4] Gerando ~{args.num} cards com '{args.model}'...")
+    else:
+        print(f"[1/4] Material grande: {len(chunks)} blocos, "
+              f"~{per_chunk} cards por bloco com '{args.model}'...")
 
-    deck_name = args.deck or data.get("deck") or default_deck or "Ollama Cards"
-    cards = data.get("cards", [])
+    cards, deck_sugerido = [], None
+    for i, chunk in enumerate(chunks, 1):
+        user = (USER_TEMPLATE
+                .replace("__N__", str(per_chunk if len(chunks) > 1 else args.num))
+                .replace("__LANG__", args.lang)
+                .replace("__CONTENT__", chunk))
+        try:
+            raw = llm.call_ollama(args.host, args.model, SYSTEM_PROMPT, user,
+                                  args.timeout)
+            data = llm.extract_json(raw)
+        except (llm.OllamaError, ValueError) as e:
+            if len(chunks) == 1:
+                sys.exit(f"[erro] {e}")
+            print(f"        bloco {i}/{len(chunks)} falhou: {e} (pulando)")
+            continue
+        deck_sugerido = deck_sugerido or data.get("deck")
+        novos = data.get("cards", [])
+        cards.extend(novos)
+        if len(chunks) > 1:
+            print(f"        bloco {i}/{len(chunks)}: {len(novos)} cards")
+
+    deck_name = args.deck or deck_sugerido or default_deck or "Ollama Cards"
     if not cards:
         sys.exit("[erro] O modelo não retornou nenhum card.")
 

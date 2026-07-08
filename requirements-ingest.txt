@@ -1,0 +1,10 @@
+# Dependências OPCIONAIS da ingestão de PDFs (Fase 2) — o core não precisa delas.
+# Instalar:  .venv\Scripts\python.exe -m pip install -r requirements-ingest.txt
+#
+# O torch instalado por padrão no Windows é CPU-only. Para OCR acelerado na
+# GPU (RTX 4060), instale o torch CUDA ANTES do docling:
+#   .venv\Scripts\python.exe -m pip install torch --index-url https://download.pytorch.org/whl/cu126
+docling
+easyocr
+pypdf
+pymupdf
