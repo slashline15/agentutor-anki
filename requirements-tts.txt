@@ -1,0 +1,3 @@
+edge-tts
+truststore
+# offline (opcional): piper-tts + modelo de voz .onnx

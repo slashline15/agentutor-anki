@@ -13,6 +13,7 @@ def test_ids_contrato():
     assert models.ID_CODE_OUT == 1980530003
     assert models.ID_QA == 1980530004
     assert models.ID_CLOZE == 1980530005
+    assert models.ID_VOCAB == 1980530006
     assert models.DECK_DEFAULT == 1980530100
 
     # os IDs dos modelos retornados por build_models() devem coincidir
@@ -22,15 +23,25 @@ def test_ids_contrato():
     assert built["code_output"].model_id == models.ID_CODE_OUT
     assert built["qa"].model_id == models.ID_QA
     assert built["cloze"].model_id == models.ID_CLOZE
+    assert built["vocab"].model_id == models.ID_VOCAB
 
 
 def test_build_models_chaves_e_contratos():
     built = models.build_models()
-    esperado = {"code_cloze", "code_write", "code_output", "qa", "cloze"}
+    esperado = {"code_cloze", "code_write", "code_output", "qa", "cloze",
+                "vocab"}
     assert set(built.keys()) == esperado
     # as mesmas chaves devem existir em FIELDS e MODEL_NAMES
     assert set(models.FIELDS.keys()) == esperado
     assert set(models.MODEL_NAMES.keys()) == esperado
+
+
+def test_vocab_dois_cartoes_e_campo_audio():
+    # o vocab tem 2 templates (reconhecimento + produção) e o índice do campo
+    # Áudio usado pelo passo de TTS precisa apontar para o campo certo
+    built = models.build_models()
+    assert len(built["vocab"].templates) == 2
+    assert models.FIELDS["vocab"][models.VOCAB_AUDIO_FIELD] == "Áudio"
 
 
 def test_modelos_nomes_e_campos():

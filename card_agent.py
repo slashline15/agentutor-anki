@@ -20,11 +20,19 @@ import argparse
 import sys
 from pathlib import Path
 
-from anki_toolkit import bridge, llm, outputs, vault
+from anki_toolkit import bridge, llm, outputs, tts, vault
 from anki_toolkit.ingest import split_sections
 from anki_toolkit.llm import DEFAULT_HOST, DEFAULT_MODEL
+from anki_toolkit.models import VOCAB_AUDIO_FIELD
 
 CHUNK_LIMIT = 12000  # chars por chamada; acima disso o material é dividido
+
+VOCAB_INSTRUCTION = """
+IMPORTANTE — MODO VOCABULÁRIO COM ÁUDIO: o aluno quer aprender vocabulário de
+inglês. PREFIRA o type "vocab" para a maioria dos cards:
+{"type":"vocab","term":"palavra ou frase EM INGLÊS","ipa":"/transcrição fonética/","meaning":"significado em português","example":"frase de exemplo natural EM INGLÊS usando o termo","extra":"dica opcional"}
+Regras do vocab: term e example sempre em inglês; meaning em português; ipa no
+formato /.../ (pode omitir se não souber); um termo por card."""
 # Re-exports de compatibilidade (rebuild_from_json antigo importava daqui)
 from anki_toolkit.outputs import slugify, write_tsv  # noqa: F401
 
@@ -97,6 +105,15 @@ def main():
     ap.add_argument("--vault", action="store_true",
                     help="Grava uma nota de estudo do baralho no vault do "
                          "Obsidian (caminho em config.json; autodetectado).")
+    ap.add_argument("--audio", action="store_true",
+                    help="Modo vocabulário: gera cards 'vocab' com MP3 de voz "
+                         "nativa (edge-tts). Falha de áudio nunca impede o card.")
+    ap.add_argument("--voice", default=tts.DEFAULT_VOICE,
+                    help=f"Voz do TTS (padrão {tts.DEFAULT_VOICE}; "
+                         "ex.: en-GB-RyanNeural).")
+    ap.add_argument("--tts", default=tts.DEFAULT_ENGINE, dest="tts_engine",
+                    choices=["edge", "piper"],
+                    help="Motor de TTS (edge=online padrão, piper=offline).")
     args = ap.parse_args()
 
     if args.file:
@@ -121,9 +138,10 @@ def main():
         print(f"[1/4] Material grande: {len(chunks)} blocos, "
               f"~{per_chunk} cards por bloco com '{args.model}'...")
 
+    template = USER_TEMPLATE + (VOCAB_INSTRUCTION if args.audio else "")
     cards, deck_sugerido = [], None
     for i, chunk in enumerate(chunks, 1):
-        user = (USER_TEMPLATE
+        user = (template
                 .replace("__N__", str(per_chunk if len(chunks) > 1 else args.num))
                 .replace("__LANG__", args.lang)
                 .replace("__CONTENT__", chunk))
@@ -169,8 +187,30 @@ def main():
     formats = {f.strip() for f in args.formats.split(",") if f.strip()}
     tags = ["gerado-ollama", slug]
 
+    # TTS: preenche o campo Áudio dos cards vocab (falha vira aviso, nunca erro)
+    media_paths = []
+    if args.audio and "vocab" in by_type:
+        media_dir = out / "media"
+        ok = 0
+        for fields in by_type["vocab"]:
+            texto = tts.vocab_tts_text(fields[0].replace("<br>", " "),
+                                       fields[3].replace("<br>", " "))
+            try:
+                path, name = tts.synthesize(texto, media_dir,
+                                            voice=args.voice,
+                                            engine=args.tts_engine)
+                fields[VOCAB_AUDIO_FIELD] = f"[sound:{name}]"
+                media_paths.append(path)
+                ok += 1
+            except tts.TTSError as e:
+                print(f"[tts] sem áudio para '{fields[0][:40]}': {e}")
+        print(f"[tts] {ok}/{len(by_type['vocab'])} áudios gerados "
+              f"({args.voice}, {args.tts_engine}).")
+
     if args.push:
         try:
+            for p in media_paths:  # áudio entra na media da coleção primeiro
+                bridge.store_media_file(p)
             res = bridge.push_cards(deck_name, tags, by_type)
             print(f"[push] {res['added']} adicionados ao Anki, "
                   f"{res['skipped']} pulados (duplicados/erro).")
@@ -186,7 +226,8 @@ def main():
         outputs.write_tsvs(out, slug, deck_name, tags, by_type)
 
     if "apkg" in formats:
-        outputs.write_apkg(out / f"{slug}.apkg", deck_name, tags, by_type)
+        outputs.write_apkg(out / f"{slug}.apkg", deck_name, tags, by_type,
+                           media_files=media_paths)
 
     if args.vault:
         try:

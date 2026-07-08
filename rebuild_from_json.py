@@ -48,7 +48,11 @@ def main():
         outputs.write_tsvs(out, slug, deck_name, tags, by_type)
 
     if "apkg" in formats:
-        outputs.write_apkg(out / f"{slug}.apkg", deck_name, tags, by_type)
+        # baralhos com áudio: reusa os mp3 gerados junto do JSON (out/media)
+        media_dir = Path(args.json).resolve().parent / "media"
+        media = sorted(media_dir.glob("*.mp3")) if media_dir.exists() else []
+        outputs.write_apkg(out / f"{slug}.apkg", deck_name, tags, by_type,
+                           media_files=media)
 
     total = sum(len(v) for v in by_type.values())
     print(f"OK -> {slug}  ({total} cards, templates atualizados)")

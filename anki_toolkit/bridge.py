@@ -6,12 +6,16 @@ Regras do projeto:
 - Falha de comunicação vira AnkiConnectError; quem decide cair para .apkg é o
   script de CLI (fallback permanente, não provisório).
 - Duplicatas são detectadas com canAddNotes e puladas (nunca inseridas 2x).
-- Os note types precisam existir na coleção com os MESMOS nomes/campos de
-  models.MODEL_NAMES/FIELDS (importar python-templates.apkg uma vez os cria).
+- Note types ausentes na coleção são CRIADOS automaticamente via createModel
+  (a partir das mesmas definições genanki de models.py) — o primeiro --push
+  funciona numa coleção zerada, sem importar .apkg antes.
 """
+import base64
 import json
 import urllib.error
 import urllib.request
+
+import genanki
 
 from . import models as _models
 
@@ -78,6 +82,44 @@ def store_media(filename, data_b64, url=DEFAULT_URL):
                   url=url)
 
 
+def store_media_file(path, url=DEFAULT_URL):
+    """Grava um arquivo local na media da coleção. Retorna o nome usado."""
+    from pathlib import Path
+    p = Path(path)
+    data_b64 = base64.b64encode(p.read_bytes()).decode("ascii")
+    store_media(p.name, data_b64, url=url)
+    return p.name
+
+
+def _model_payload(key):
+    """Definição genanki -> params do createModel do AnkiConnect."""
+    m = _models.build_models()[key]
+    return {
+        "modelName": m.name,
+        "inOrderFields": [f["name"] for f in m.fields],
+        "css": m.css,
+        "isCloze": m.model_type == genanki.Model.CLOZE,
+        "cardTemplates": [
+            {"Name": t["name"], "Front": t["qfmt"], "Back": t["afmt"]}
+            for t in m.templates],
+    }
+
+
+def ensure_models(types, url=DEFAULT_URL):
+    """Cria na coleção os note types de `types` que ainda não existem.
+
+    Retorna a lista de nomes criados (vazia se todos já existiam).
+    """
+    existing = set(invoke("modelNames", url=url))
+    created = []
+    for t in sorted(set(types)):
+        name = _models.MODEL_NAMES[t]
+        if name not in existing:
+            invoke("createModel", _model_payload(t), url=url)
+            created.append(name)
+    return created
+
+
 def push_cards(deck_name, tags, by_type, url=DEFAULT_URL):
     """Cria o deck (se preciso) e adiciona as notas; pula duplicatas.
 
@@ -89,13 +131,8 @@ def push_cards(deck_name, tags, by_type, url=DEFAULT_URL):
     if not notes:
         return {"added": 0, "skipped": 0, "total": 0}
 
-    # note type ausente é erro de configuração (duplicata, não — é rotina)
-    existing = set(invoke("modelNames", url=url))
-    missing = {_models.MODEL_NAMES[t] for t in by_type} - existing
-    if missing:
-        raise AnkiConnectError(
-            "Note types ausentes na coleção: " + ", ".join(sorted(missing))
-            + ". Importe python-templates.apkg uma vez para criá-los.")
+    # note types ausentes são criados na hora (coleção zerada funciona)
+    ensure_models(by_type.keys(), url=url)
 
     invoke("createDeck", {"deck": deck_name}, url=url)
 

@@ -66,6 +66,14 @@ def card_to_fields(card):
         if not has_cloze(code):
             return None
         return "code_cloze", [nl2br(code), ex]
+    if t == "vocab":
+        term, meaning = card.get("term", ""), card.get("meaning", "")
+        if not term or not meaning:
+            return None
+        # campo Áudio nasce vazio; o passo de TTS do card_agent preenche
+        return "vocab", [nl2br(term), nl2br(card.get("ipa", "")),
+                         nl2br(meaning), nl2br(card.get("example", "")),
+                         "", ex]
     return None
 
 

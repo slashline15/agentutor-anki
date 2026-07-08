@@ -152,29 +152,70 @@ def test_push_cards_todas_duplicadas_e_resultado_normal(monkeypatch):
     assert "addNotes" not in [c["action"] for c in chamadas]
 
 
-def test_push_cards_note_type_ausente_levanta_erro(monkeypatch):
-    # coleção sem os note types do projeto: erro claro ANTES de criar o deck
+def test_push_cards_note_type_ausente_e_criado_automaticamente(monkeypatch):
+    # coleção sem os note types do projeto: cria via createModel e segue
+    chamadas = []
+
+    def fake_post(url, payload, timeout):
+        chamadas.append(payload)
+        action = payload["action"]
+        if action == "modelNames":
+            return {"result": ["Basic", "Cloze"], "error": None}
+        if action == "createModel":
+            return {"result": {"id": 1}, "error": None}
+        if action == "createDeck":
+            return {"result": 1, "error": None}
+        if action == "canAddNotes":
+            return {"result": [True], "error": None}
+        if action == "addNotes":
+            return {"result": [111], "error": None}
+        return {"result": None, "error": None}
+
+    monkeypatch.setattr(bridge, "_post", fake_post)
+
+    resultado = bridge.push_cards("DeckTeste", ["tag"],
+                                  {"qa": [["P1", "R1", ""]]})
+    assert resultado == {"added": 1, "skipped": 0, "total": 1}
+
+    criados = [c for c in chamadas if c["action"] == "createModel"]
+    assert len(criados) == 1
+    params = criados[0]["params"]
+    assert params["modelName"] == MODEL_NAMES["qa"]
+    assert params["inOrderFields"] == FIELDS["qa"]
+    assert params["isCloze"] is False
+    assert len(params["cardTemplates"]) == 1
+
+
+def test_ensure_models_nao_cria_quando_todos_existem(monkeypatch):
     chamadas = []
 
     def fake_post(url, payload, timeout):
         chamadas.append(payload)
         if payload["action"] == "modelNames":
-            return {"result": ["Basic", "Cloze"], "error": None}
+            return {"result": list(MODEL_NAMES.values()), "error": None}
         return {"result": None, "error": None}
 
     monkeypatch.setattr(bridge, "_post", fake_post)
 
-    by_type = {"qa": [["P1", "R1", ""]]}
+    assert bridge.ensure_models(["qa", "vocab", "cloze"]) == []
+    assert [c["action"] for c in chamadas] == ["modelNames"]
 
-    try:
-        bridge.push_cards("DeckTeste", ["tag"], by_type)
-    except bridge.AnkiConnectError as e:
-        assert "ausentes" in str(e).lower()
-        assert MODEL_NAMES["qa"] in str(e)
-        assert [c["action"] for c in chamadas] == ["modelNames"]
-        return
 
-    raise AssertionError("Esperava AnkiConnectError")
+def test_ensure_models_cria_cloze_com_iscloze_true(monkeypatch):
+    chamadas = []
+
+    def fake_post(url, payload, timeout):
+        chamadas.append(payload)
+        if payload["action"] == "modelNames":
+            return {"result": [], "error": None}
+        return {"result": {"id": 1}, "error": None}
+
+    monkeypatch.setattr(bridge, "_post", fake_post)
+
+    criados = bridge.ensure_models(["cloze"])
+    assert criados == [MODEL_NAMES["cloze"]]
+    params = [c for c in chamadas if c["action"] == "createModel"][0]["params"]
+    assert params["isCloze"] is True
 
 
 def test_push_cards_by_type_vazio_retorna_zeros_sem_chamadas(monkeypatch):

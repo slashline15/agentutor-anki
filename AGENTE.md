@@ -143,3 +143,22 @@ chamadas ao modelo automaticamente — nada muda no comando.
 ```
 
 Esse fluxo cria a nota de estudo em `Estudos/Baralhos/<deck>.md` e mantém o material original em `Estudos/Materiais/`.
+
+## Inglês com áudio nativo (--audio)
+
+- `card_agent.py --topic "..." --audio` entra em modo vocabulário: gera cards do note type **Inglês — Vocabulário** (campos **Termo, IPA, Significado, Exemplo, Áudio, Notas**), com MP3 de voz neural nativa embutido (motor *edge‑tts*, grátis, precisa de internet).  
+- Cada nota gera **DOIS** cartões no Anki:  
+  1. **Reconhecimento** – mostra/ouve o termo em inglês e pede o significado.  
+  2. **Produção** – mostra o significado e pede que o usuário fale ou lembre o termo em inglês.  
+- `--voice` troca a voz utilizada (padrão `en-US-AriaNeural`; exemplo de voz britânica: `en-GB-RyanNeural`).  
+- `--tts piper` usa motor **100 % offline** (requer `pip install piper-tts` e um modelo de voz compatível).  
+- Se o áudio falhar (por falta de internet ou erro no TTS), os cards são criados **mesmo assim**, apenas sem o som – o processo nunca trava.  
+- Compatível com `--push`: o áudio já é inserido na mídia do Anki durante o upload.  
+- Compatível com exportação `.apkg`: o MP3 é incluído dentro do pacote.  
+- O note type novo é criado automaticamente na coleção no primeiro `--push`.  
+
+**Exemplo de uso (PowerShell):**
+
+```powershell
+.\.venv\Scripts\python.exe card_agent.py --topic "phrasal verbs de trabalho" -n 10 --audio --push
+```

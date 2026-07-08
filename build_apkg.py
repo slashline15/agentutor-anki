@@ -54,6 +54,12 @@ deck.add_note(genanki.Note(model=models["cloze"], fields=[
     "Em Python, o método {{c1::.append()}} adiciona um item ao {{c2::final}} de uma lista.",
     ""]))
 
+# Inglês — Vocabulário (sem áudio no exemplo; o card_agent --audio preenche) ---
+deck.add_note(genanki.Note(model=models["vocab"], fields=[
+    "to withdraw", "/wɪðˈdrɔː/", "sacar (dinheiro); retirar(-se)",
+    "I need to withdraw some cash before the trip.", "",
+    "Verbo irregular: withdraw / withdrew / withdrawn."]))
+
 out_path = BASE / "python-templates.apkg"
 genanki.Package(deck).write_to_file(str(out_path))
 print(f"OK -> {out_path}  ({len(deck.notes)} cards)")
