@@ -32,6 +32,16 @@ Dependência do core: só `genanki`; dev: `pytest` (`requirements-dev.txt`). Usa
 # (é assim que se testa mudança de template com cards reais)
 .\.venv\Scripts\python.exe rebuild_from_json.py --json output/<slug>.json
 
+# Templates: fonte única do realce é templates/tokenizer.js; após editar:
+.\.venv\Scripts\python.exe build_templates.py          # regenera os HTML
+.\.venv\Scripts\python.exe build_templates.py --push   # atualiza no Anki aberto
+node --test tests/                                     # testes do tokenizer
+
+# Tutor (Anki aberto; modelo LOCAL por padrão — histórico é dado pessoal)
+.\.venv\Scripts\python.exe tutor.py relatorio --vault
+.\.venv\Scripts\python.exe tutor.py reforcar --deck "X" --push
+.\.venv\Scripts\python.exe tutor.py explicar "busca do anki"
+
 # Orquestração: delegar tarefa de código a um modelo Ollama cloud
 # (o usuário tem saldo ilimitado no Ollama; preferir isso a gastar tokens
 #  Anthropic em geração longa de código bem especificado — Claude escreve a
@@ -53,7 +63,9 @@ Saídas vão para `output/`: `<slug>.apkg`, `<slug>__<tipo>.tsv` (um por note ty
 - `anki_toolkit/ingest.py` — PDF → markdown (`library/`, ignorada pelo git). Rotas: `digital` (docling com `do_ocr=False` — OBRIGATÓRIO, o pipeline padrão tenta baixar modelos RapidOCR e falha), `scanned` (docling + EasyOCR em lotes de páginas; lotes evitam `std::bad_alloc` do backend em PDFs longos; GPU via torch CUDA), `ollama` (multimodal, fallback). Imports pesados são preguiçosos DENTRO das funções — importar o módulo não pode exigir docling/torch. `split_sections()` (pura) divide material grande para o card_agent gerar em várias chamadas.
 - `anki_toolkit/tts.py` — áudio dos cards vocab (`card_agent --audio`): edge-tts padrão (`--voice`), piper offline. Nome do mp3 é determinístico por (texto, voz) — regerar não duplica media. **Nesta máquina há interceptação TLS (antivírus/proxy): o `_synth_edge` injeta `truststore` ANTES de importar edge_tts, senão SSL falha** — não remover. Falha de TTS vira aviso, nunca erro. O bridge cria note types ausentes na coleção via `createModel` (`ensure_models`) — não existe mais o passo "importe o .apkg primeiro".
 - `anki_toolkit/vault.py` — Obsidian via sistema de arquivos (sem plugin). Caminho do vault em `config.json` (ignorado pelo git; autodetectado do registro `%APPDATA%\obsidian\obsidian.json` na primeira execução com `--vault` — prioriza o vault com `"open": true`). Estrutura: `Estudos/Materiais|Baralhos|Revisões`. `VaultError` no card_agent é avisado e NUNCA derruba a geração. Funções de render/parse são puras (testáveis sem IO); as de IO aceitam `config_path=` para os testes.
-- O gateway dos modelos Ollama `:cloud` devolve **HTTP 502 em episódios de minutos**; `llm.call_ollama` tem retry (3x/10s) para 5xx — se um 502 persistir, é episódio: aguardar e repetir, não é bug do código.
+- `anki_toolkit/tutor.py` + `tutor.py` — tutor: lê fraquezas (lapses/ease) SÓ via AnkiConnect (nunca abrir o SQLite `collection.anki2` direto), gera reforço em `<deck>::Reforço` e explica cards. Modelo padrão LOCAL (`gemma4:12b`) por privacidade do histórico — não trocar o default para cloud.
+- **Templates HTML são GERADOS**: o realce vive em `templates/tokenizer.js` (fonte única) e `build_templates.py` injeta entre os marcadores `TOKENIZER:BEGIN/END` dos 5 HTML. Nunca editar o bloco injetado à mão. O modo padrão do tokenizer deve permanecer byte-idêntico ao antigo (teste em `tests/tokenizer.test.js` compara com uma cópia literal do algoritmo original). Linguagem por card: `<span data-lang="bash|powershell" hidden>` inserido por `outputs.lang_marker` SEMPRE num campo exibido, nunca no alvo de `{{type:}}`.
+- O gateway dos modelos Ollama `:cloud` devolve **HTTP 502 em episódios de minutos**; `llm.call_ollama` tem retry (3x/10s) para 5xx — se um 502 persistir, é episódio: usar um modelo local (ex.: `gemma4:12b`) ou aguardar; não é bug do código.
 
 Note types definidos em `anki_toolkit/models.py`:
 

@@ -1,0 +1,48 @@
+{
+  "schema": 1,
+  "deck": "English phrases - Mairo::Reforço",
+  "model": "gemma4:12b",
+  "gerado_em": "2026-07-08T00:22:26",
+  "cards": [
+    {
+      "type": "qa",
+      "fields": [
+        "Qual o sentido do phrasal verb 'make out' na frase: 'I can't make out what he is saying because of the noise.'?",
+        "Discernir / Entender (conseguir identificar algo que não está claro).",
+        ""
+      ]
+    },
+    {
+      "type": "qa",
+      "fields": [
+        "No contexto financeiro, o que significa 'make out a check' ou 'make out a certificate'?",
+        "Preencher / Emitir / Escrever (preencher os dados em um documento oficial).",
+        ""
+      ]
+    },
+    {
+      "type": "qa",
+      "fields": [
+        "Qual é o sentido de 'make out' na frase: 'They make out to be experts in the field.'?",
+        "Fingir / Passar a impressão de (fingir ser algo que não é).",
+        ""
+      ]
+    },
+    {
+      "type": "qa",
+      "fields": [
+        "Qual o sentido do phrasal verb 'bring up' em: 'She was brought up by her grandparents.'?",
+        "Criar / Educar (crescer sob os cuidados de alguém).",
+        ""
+      ]
+    },
+    {
+      "type": "qa",
+      "fields": [
+        "Em contextos médicos, o que significa 'bring up' quando se fala sobre comida ou líquidos?",
+        "Vomitar / Devolver (expulsar do estômago).",
+        ""
+      ]
+    }
+  ]
+}

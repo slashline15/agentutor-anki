@@ -162,3 +162,62 @@ Esse fluxo cria a nota de estudo em `Estudos/Baralhos/<deck>.md` e mantém o mat
 ```powershell
 .\.venv\Scripts\python.exe card_agent.py --topic "phrasal verbs de trabalho" -n 10 --audio --push
 ```
+
+## Cards de Bash e PowerShell (realce automático)
+
+- O agente agora identifica a linguagem dos cards de código (`"lang"` no JSON) e os templates de terminal já realçam Python e JavaScript. O suporte foi ampliado para **Bash** e **PowerShell** sem mudar a interface.
+- O mesmo comando continua funcionando e já gera o realce correto:
+
+```powershell
+.\.venv\Scripts\python.exe card_agent.py --topic "comandos bash" --push
+```
+
+- Para quem precisa ajustar os templates:
+  1. Edite o arquivo único de realce: `templates/tokenizer.js`.
+  2. Regere os arquivos HTML dos templates:
+
+```powershell
+.\.venv\Scripts\python.exe build_templates.py
+```
+
+  3. Atualize os note types no Anki aberto:
+
+```powershell
+.\.venv\Scripts\python.exe build_templates.py --push
+```
+
+---
+
+## Tutor: relatório de fraquezas, reforço e explicações (tutor.py)
+
+- **Requisitos:** Anki aberto (o script lê o histórico via AnkiConnect; nunca altera o banco diretamente).
+- **Privacidade:** O modelo padrão é **LOCAL** (`gemma4:12b`). Para usar um modelo cloud, informe explicitamente `--model`.
+
+### Relatório de fraquezas
+```powershell
+.\.venv\Scripts\python.exe tutor.py relatorio
+```
+- Exibe os decks problemáticos e os cards com maior taxa de erro.
+- Opções:
+  - `--min-lapses <n>` – número mínimo de lapses para aparecer (padrão = 3).
+  - `--deck <nome>` – filtra por deck específico.
+  - `--vault` – salva o relatório datado em `Estudos/Revisões/` do Obsidian.
+
+### Reforço de conteúdo
+```powershell
+.\.venv\Scripts\python.exe tutor.py reforcar --deck "X" -n 8 --push
+```
+- Seleciona os temas mais errados no deck **X**, gera **8** novos cards reformulados e os coloca no sub‑deck `X::Reforço`.
+- Flags úteis: `--deck`, `-n`, `--push`, `--top` (para limitar ao top N temas).
+
+### Explicação de um card
+```powershell
+.\.venv\Scripts\python.exe tutor.py explicar "busca"
+```
+- Busca o card usando a sintaxe de busca do Anki.
+- Exibe:
+  - Por que a resposta está correta.
+  - Um exemplo novo.
+  - Um macete de memorização.
+
+**Flags comuns** (válidas em todos os sub‑comandos): `--deck`, `--min-lapses`, `--top`, `--model`.

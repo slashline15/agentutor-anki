@@ -1,5 +1,10 @@
 # ROADMAP — Anki Toolkit / Tutor pessoal de estudo
 
+> **STATUS: TODAS AS 6 FASES CONCLUÍDAS (2026-07-07 → 2026-07-08).**
+> Fase 0 `619e8db` · Fase 1 `4268376` · Fase 2 `640b119` · Fase 3 `c1dea9b`
+> · Fase 4 `1114f80` · Fase 5 `aabda9e` · Fase 6 (tutor) no commit final.
+> O documento abaixo é o plano original, mantido como referência de decisões.
+
 > Plano revisado em 2026-07-07. Objetivo macro: transformar o gerador de cards num
 > **tutor pessoal** que ingere material (PDFs, anotações), cria cards bem formulados,
 > adiciona sozinho ao Anki, guarda tudo no Obsidian e acompanha a evolução do aluno.
