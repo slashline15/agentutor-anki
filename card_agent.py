@@ -20,7 +20,7 @@ import argparse
 import sys
 from pathlib import Path
 
-from anki_toolkit import bridge, llm, outputs
+from anki_toolkit import bridge, llm, outputs, vault
 from anki_toolkit.ingest import split_sections
 from anki_toolkit.llm import DEFAULT_HOST, DEFAULT_MODEL
 
@@ -94,6 +94,9 @@ def main():
     ap.add_argument("--push", action="store_true",
                     help="Adiciona direto no Anki aberto via AnkiConnect "
                          "(se o Anki estiver fechado, cai para .apkg).")
+    ap.add_argument("--vault", action="store_true",
+                    help="Grava uma nota de estudo do baralho no vault do "
+                         "Obsidian (caminho em config.json; autodetectado).")
     args = ap.parse_args()
 
     if args.file:
@@ -184,6 +187,15 @@ def main():
 
     if "apkg" in formats:
         outputs.write_apkg(out / f"{slug}.apkg", deck_name, tags, by_type)
+
+    if args.vault:
+        try:
+            source_stem = Path(args.file).stem if args.file else None
+            note = vault.write_deck_note(deck_name, args.model, tags, kept,
+                                         source_stem=source_stem)
+            print(f"[vault] nota de estudo: {note}")
+        except vault.VaultError as e:  # nunca derruba a geração
+            print(f"[vault] {e}")
 
     print(f"[3/4] Baralho: '{deck_name}'  (tags: {', '.join(tags)})")
     print(f"[4/4] Arquivos em: {out}")

@@ -15,6 +15,7 @@ import argparse
 import sys
 
 from anki_toolkit import ingest as ing
+from anki_toolkit import vault
 
 
 def main():
@@ -29,6 +30,9 @@ def main():
                     help=f"Páginas por lote na rota scanned (padrão {ing.BATCH_SIZE}).")
     ap.add_argument("--model", default=ing.OLLAMA_OCR_MODEL,
                     help="Modelo multimodal da rota ollama.")
+    ap.add_argument("--vault", action="store_true",
+                    help="Grava o markdown em Estudos/Materiais/ do vault do "
+                         "Obsidian em vez de library/.")
     args = ap.parse_args()
 
     kwargs = {}
@@ -37,8 +41,15 @@ def main():
     if args.route == "ollama":
         kwargs["model"] = args.model
 
+    out_dir = args.out
+    if args.vault:
+        try:
+            out_dir = vault.materials_dir()
+        except vault.VaultError as e:
+            sys.exit(f"[erro] {e}")
+
     try:
-        out = ing.ingest(args.pdf, out_dir=args.out, route=args.route, **kwargs)
+        out = ing.ingest(args.pdf, out_dir=out_dir, route=args.route, **kwargs)
     except ing.IngestError as e:
         sys.exit(f"[erro] {e}")
 

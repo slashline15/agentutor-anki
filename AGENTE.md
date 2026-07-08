@@ -95,3 +95,51 @@ Para OCR na GPU, instale o torch CUDA antes (comando no comentário do próprio
 
 **Materiais grandes:** o `card_agent` divide o conteúdo por seções e faz várias
 chamadas ao modelo automaticamente — nada muda no comando.
+
+## Notas no Obsidian (--vault)
+
+- A flag `--vault` está presente em **card_agent.py** e **ingest.py**.  
+  Sem ela, nada é escrito no Obsidian.
+
+### card_agent.py … `--vault`
+
+- Além de criar o baralho no Anki, grava uma **nota de estudo** no vault em:  
+
+  ```
+  Estudos/Baralhos/<deck>.md
+  ```
+
+- O arquivo contém:
+  - **frontmatter** com: `deck`, `modelo`, `tags`, `nº de cards`, `data`.
+  - Link `[[material]]` quando o baralho foi gerado a partir de um arquivo.
+  - Todos os cards em formato legível, funcionando como índice do que já virou card.
+
+### ingest.py `apostila.pdf --vault`
+
+- Extrai o conteúdo da apostila e grava o markdown resultante em:  
+
+  ```
+  Estudos/Materiais/
+  ```
+
+  dentro do vault, ao invés de `library/`.
+
+### Configuração do caminho do vault
+
+- O caminho do vault é definido em **config.json** na raiz do projeto, na chave `"vault"`.
+- Na **primeira execução** com `--vault`, o script detecta automaticamente o vault aberto no Obsidian e salva o caminho em `config.json`.
+- Para mudar o vault, edite o valor de `"vault"` em `config.json`.
+- A subpasta padrão `"Estudos"` também é configurável via a chave `"vault_subdir"` em `config.json`.
+
+### Fluxo completo de exemplo
+
+```powershell
+# 1. Ingestão da apostila para o vault
+.\.venv\Scripts\python.exe ingest.py apostila.pdf --vault
+
+# 2. Geração de cards a partir do arquivo no vault e envio ao Anki
+#    (o ingest imprime o caminho completo do .md — use-o aqui)
+.\.venv\Scripts\python.exe card_agent.py --file "<caminho-do-vault>studosMateriaispostila.md" --push --vault
+```
+
+Esse fluxo cria a nota de estudo em `Estudos/Baralhos/<deck>.md` e mantém o material original em `Estudos/Materiais/`.
