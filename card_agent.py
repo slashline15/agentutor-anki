@@ -71,7 +71,8 @@ Para cada card escolha o melhor "type":
 - "code_cloze": código com lacuna de sintaxe. Campo: code (com {{c1::trecho}}), extra(opcional).
 
 Use os tipos de código (code_*) SOMENTE quando o conteúdo for sobre programação.
-Nas respostas de código, use \\n para quebras de linha. Mantenha a saída ("answer" de code_output) idêntica ao que o Python imprimiria.
+Nos tipos code_*, inclua também "lang" com a linguagem do código: "python", "javascript", "bash" ou "powershell".
+Nas respostas de código, use \\n para quebras de linha. Mantenha a saída ("answer" de code_output) idêntica ao que a linguagem imprimiria.
 
 Responda EXATAMENTE neste formato JSON (sem nada além do JSON):
 {

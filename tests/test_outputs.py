@@ -81,6 +81,43 @@ def test_card_to_fields_tipo_desconhecido_retorna_none():
     assert outputs.card_to_fields({"type": "inexistente", "front": "x", "back": "y"}) is None
 
 
+MARCADOR_BASH = '<span data-lang="bash" hidden></span>'
+
+
+def test_lang_marker_bash_e_powershell():
+    assert outputs.lang_marker({"lang": "bash"}) == MARCADOR_BASH
+    assert outputs.lang_marker({"lang": "SH"}) == MARCADOR_BASH  # alias, case
+    assert 'data-lang="powershell"' in outputs.lang_marker({"lang": "ps1"})
+
+
+def test_lang_marker_vazio_para_python_js_e_ausente():
+    # python/js são o modo padrão do tokenizer: sem marcador
+    assert outputs.lang_marker({"lang": "python"}) == ""
+    assert outputs.lang_marker({"lang": "javascript"}) == ""
+    assert outputs.lang_marker({}) == ""
+
+
+def test_card_to_fields_code_com_lang_marca_o_campo_exibido():
+    # code_output: marcador no Codigo (exibido); Saida (typed) fica limpa
+    t, campos = outputs.card_to_fields(
+        {"type": "code_output", "code": "echo oi", "answer": "oi", "lang": "bash"})
+    assert campos[0].startswith(MARCADOR_BASH)
+    assert MARCADOR_BASH not in campos[1]
+
+    # code_write: marcador na Pergunta; o Codigo (typed) NUNCA leva marcador
+    t, campos = outputs.card_to_fields(
+        {"type": "code_write", "front": "Liste arquivos", "answer": "ls -la",
+         "lang": "bash"})
+    assert campos[0].startswith(MARCADOR_BASH)
+    assert campos[1] == "ls -la"
+
+    # code_cloze: marcador no Front
+    t, campos = outputs.card_to_fields(
+        {"type": "code_cloze", "code": "for f in *; do {{c1::echo $f}}; done",
+         "lang": "bash"})
+    assert campos[0].startswith(MARCADOR_BASH)
+
+
 def test_deck_id_deterministico():
     assert outputs.deck_id("slug") == outputs.deck_id("slug")
 

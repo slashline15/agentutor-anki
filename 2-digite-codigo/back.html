@@ -26,41 +26,101 @@
 {{/Notas}}
 
 <script>
-(function () {
-  var PY_KW = ['False','None','True','and','as','assert','async','await','break','case','catch','class','const','continue','def','default','del','delete','do','elif','else','except','export','extends','false','finally','for','from','function','global','if','import','in','instanceof','is','lambda','let','new','nonlocal','not','null','of','or','pass','raise','return','static','super','switch','this','throw','true','try','typeof','undefined','var','void','while','with','yield'];
-  var PY_BI = ['abs','alert','all','any','Array','bool','Boolean','console','dict','document','enumerate','filter','float','format','frozenset','input','int','isNaN','JSON','len','list','map','Math','max','min','Number','Object','open','parseFloat','parseInt','print','prompt','range','repr','reversed','round','set','sorted','str','String','sum','tuple','type','window','zip'];
+// ==== TOKENIZER:BEGIN — gerado de templates/tokenizer.js; edite lá e rode build_templates.py ====
+/* ==========================================================================
+   tokenizer.js — FONTE ÚNICA do realce de sintaxe dos templates de terminal.
+   NÃO edite o bloco injetado nos front/back.html: edite ESTE arquivo e rode
+       .venv\Scripts\python.exe build_templates.py
+   que replica o conteúdo entre os marcadores TOKENIZER:BEGIN/END nos 5 HTML.
 
-  function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+   Linguagens: o padrão ("auto") é o dicionário combinado Python+JS original
+   (cards antigos não mudam). Um card pode fixar a linguagem com um marcador
+   invisível no campo exibido:  <span data-lang="bash" hidden></span>
+   (o card_agent insere isso sozinho a partir do "lang" do JSON).
+   ========================================================================== */
+var TermHl = (function () {
+  // ---- dicionários -------------------------------------------------------
+  // "auto": comportamento ORIGINAL (Python+JS juntos) — não alterar listas.
+  var AUTO_KW = ['False','None','True','and','as','assert','async','await','break','case','catch','class','const','continue','def','default','del','delete','do','elif','else','except','export','extends','false','finally','for','from','function','global','if','import','in','instanceof','is','lambda','let','new','nonlocal','not','null','of','or','pass','raise','return','static','super','switch','this','throw','true','try','typeof','undefined','var','void','while','with','yield'];
+  var AUTO_BI = ['abs','alert','all','any','Array','bool','Boolean','console','dict','document','enumerate','filter','float','format','frozenset','input','int','isNaN','JSON','len','list','map','Math','max','min','Number','Object','open','parseFloat','parseInt','print','prompt','range','repr','reversed','round','set','sorted','str','String','sum','tuple','type','window','zip'];
 
-  function buildRe(){
-    return new RegExp(
-      '(#[^\\n]*)|' +
-      '("""[\\s\\S]*?"""|\'\'\'[\\s\\S]*?\'\'\')|' +
-      '("(?:\\\\.|[^"\\\\])*"|\'(?:\\\\.|[^\'\\\\])*\')|' +
-      '\\b(\\d+\\.?\\d*)\\b|' +
-      '(@[A-Za-z_]\\w*)|' +
-      '\\b(' + PY_KW.join('|') + ')\\b|' +
-      '\\b(' + PY_BI.join('|') + ')\\b', 'g');
+  var BASH_KW = ['if','then','else','elif','fi','for','while','until','do','done','case','esac','in','function','select','time','coproc','return','break','continue','shift','local','export','readonly','declare','unset','trap','eval','exec','source','alias','set'];
+  var BASH_BI = ['echo','printf','read','cd','ls','pwd','cat','grep','sed','awk','cut','sort','uniq','head','tail','wc','find','xargs','mkdir','rmdir','rm','cp','mv','touch','chmod','chown','ln','tar','curl','wget','kill','ps','test','sudo','which','dirname','basename','sleep','date','tr','tee','exit','true','false'];
+
+  var PS_KW = ['param','function','filter','workflow','class','enum','using','if','else','elseif','switch','foreach','for','while','do','until','in','return','break','continue','try','catch','finally','throw','trap','begin','process','end','dynamicparam','hidden','static'];
+  var PS_OP = ['-eq','-ne','-gt','-ge','-lt','-le','-like','-notlike','-match','-notmatch','-contains','-notcontains','-in','-notin','-replace','-and','-or','-not','-xor','-band','-bor','-is','-isnot','-as','-join','-split'];
+
+  // ---- regras por linguagem ----------------------------------------------
+  // Cada regra: [padrão, classe]. A ordem importa (comentário/string primeiro).
+  var LANGS = {
+    auto: [
+      ['(#[^\\n]*)', 'tok-comment'],
+      ['("""[\\s\\S]*?"""|\'\'\'[\\s\\S]*?\'\'\')', 'tok-string'],
+      ['("(?:\\\\.|[^"\\\\])*"|\'(?:\\\\.|[^\'\\\\])*\')', 'tok-string'],
+      ['\\b(\\d+\\.?\\d*)\\b', 'tok-number'],
+      ['(@[A-Za-z_]\\w*)', 'tok-decorator'],
+      ['\\b(' + AUTO_KW.join('|') + ')\\b', 'tok-keyword'],
+      ['\\b(' + AUTO_BI.join('|') + ')\\b', 'tok-builtin']
+    ],
+    bash: [
+      ['(#[^\\n]*)', 'tok-comment'],
+      ['("(?:\\\\.|[^"\\\\])*"|\'[^\']*\')', 'tok-string'],
+      ['\\b(\\d+\\.?\\d*)\\b', 'tok-number'],
+      ['(\\$\\{[^}]*\\}|\\$[A-Za-z_@#?!*0-9]\\w*)', 'tok-decorator'],
+      ['\\b(' + BASH_KW.join('|') + ')\\b', 'tok-keyword'],
+      ['\\b(' + BASH_BI.join('|') + ')\\b', 'tok-builtin']
+    ],
+    powershell: [
+      ['(<#[\\s\\S]*?#>|#[^\\n]*)', 'tok-comment'],
+      ['("(?:`.|[^"`])*"|\'[^\']*\')', 'tok-string'],
+      ['\\b(\\d+\\.?\\d*)\\b', 'tok-number'],
+      ['(\\$\\{[^}]*\\}|\\$[A-Za-z_]\\w*|\\$[?_^])', 'tok-decorator'],
+      ['((?:' + PS_OP.join('|') + ')(?![\\w-]))', 'tok-keyword'],
+      ['\\b(' + PS_KW.join('|') + ')\\b', 'tok-keyword'],
+      ['\\b([A-Z][a-z]+-[A-Za-z]\\w*)\\b', 'tok-builtin']
+    ]
+  };
+  LANGS.python = LANGS.auto;   // pedir python/js explícito = comportamento padrão
+  LANGS.js = LANGS.auto;
+  LANGS.javascript = LANGS.auto;
+  LANGS.sh = LANGS.bash;
+  LANGS.shell = LANGS.bash;
+  LANGS.ps1 = LANGS.powershell;
+  LANGS.pwsh = LANGS.powershell;
+
+  function esc(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
 
-  function tokenize(code){
-    var re = buildRe(), out = '', last = 0, m;
-    while ((m = re.exec(code)) !== null){
+  function rulesFor(lang) {
+    return LANGS[(lang || 'auto').toLowerCase()] || LANGS.auto;
+  }
+
+  function tokenize(code, lang) {
+    var rules = rulesFor(lang);
+    var re = new RegExp(rules.map(function (r) { return r[0]; }).join('|'), 'g');
+    var out = '', last = 0, m;
+    while ((m = re.exec(code)) !== null) {
       out += esc(code.slice(last, m.index));
-      if (m[1])      out += '<span class="tok-comment">'   + esc(m[1]) + '</span>';
-      else if (m[2]) out += '<span class="tok-string">'    + esc(m[2]) + '</span>';
-      else if (m[3]) out += '<span class="tok-string">'    + esc(m[3]) + '</span>';
-      else if (m[4]) out += '<span class="tok-number">'    + esc(m[4]) + '</span>';
-      else if (m[5]) out += '<span class="tok-decorator">' + esc(m[5]) + '</span>';
-      else if (m[6]) out += '<span class="tok-keyword">'   + esc(m[6]) + '</span>';
-      else if (m[7]) out += '<span class="tok-builtin">'   + esc(m[7]) + '</span>';
+      for (var i = 0; i < rules.length; i++) {
+        if (m[i + 1] !== undefined) {
+          out += '<span class="' + rules[i][1] + '">' + esc(m[i + 1]) + '</span>';
+          break;
+        }
+      }
       last = re.lastIndex;
     }
     return out + esc(code.slice(last));
   }
 
+  // ---- helpers de DOM ------------------------------------------------------
+  function detectLang() {
+    var el = document.querySelector('[data-lang]');
+    return el ? el.getAttribute('data-lang') : 'auto';
+  }
+
   // Extrai o texto cru do código (converte <br>/<div> em quebras de linha)
-  function getCodeText(el){
+  function getCodeText(el) {
     var html = el.innerHTML
       .replace(/<br\s*\/?>/gi, '\n')
       .replace(/<\/div>\s*<div>/gi, '\n')
@@ -70,18 +130,69 @@
     return tmp.textContent;
   }
 
-  function run(){
-    var code = document.getElementById('code');
-    var gutter = document.getElementById('gutter');
-    if (!code) return;
-    var text = getCodeText(code);
-    code.innerHTML = tokenize(text);
-    var n = text.split('\n').length, g = '';
-    for (var i = 1; i <= n; i++) g += '<div>' + i + '</div>';
-    gutter.innerHTML = g;
+  // Destaca apenas os nós de texto FORA dos clozes (spans .cloze do Anki)
+  function highlightPreservingCloze(el, lang) {
+    var walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, {
+      acceptNode: function (n) {
+        return (n.parentElement && n.parentElement.closest('.cloze'))
+          ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT;
+      }
+    });
+    var nodes = [], n;
+    while ((n = walker.nextNode())) nodes.push(n);
+    nodes.forEach(function (node) {
+      if (!node.nodeValue.trim() && node.nodeValue.indexOf('\n') === -1) return;
+      var span = document.createElement('span');
+      span.innerHTML = tokenize(node.nodeValue, lang);
+      node.parentNode.replaceChild(span, node);
+    });
   }
 
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run);
-  else run();
+  function gutterHtml(n) {
+    var g = '';
+    for (var i = 1; i <= n; i++) g += '<div>' + i + '</div>';
+    return g;
+  }
+
+  function lineCount(el) {
+    var brs = (el.innerHTML.match(/<br\s*\/?>/gi) || []).length;
+    var nls = (el.textContent.match(/\n/g) || []).length;
+    return Math.max(brs, nls) + 1;
+  }
+
+  // ---- ponto de entrada ----------------------------------------------------
+  // opts: {cloze: bool  -> preserva spans .cloze (template 1),
+  //        focus: bool  -> foca a caixa de digitação}
+  function run(opts) {
+    opts = opts || {};
+    function go() {
+      var lang = detectLang();
+      var code = document.getElementById('code');
+      var gutter = document.getElementById('gutter');
+      if (code) {
+        if (opts.cloze) {
+          if (gutter) gutter.innerHTML = gutterHtml(lineCount(code));
+          highlightPreservingCloze(code, lang);
+        } else {
+          var text = getCodeText(code);
+          code.innerHTML = tokenize(text, lang);
+          if (gutter) gutter.innerHTML = gutterHtml(text.split('\n').length);
+        }
+      }
+      if (opts.focus) {
+        var t = document.getElementById('typeans');
+        if (t) { try { t.focus(); } catch (e) {} }
+      }
+    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', go);
+    else go();
+  }
+
+  return { run: run, tokenize: tokenize, esc: esc, rulesFor: rulesFor };
 })();
+
+/* para testes em Node (não roda no Anki) */
+if (typeof module !== 'undefined' && module.exports) { module.exports = TermHl; }
+// ==== TOKENIZER:END ====
+TermHl.run({});
 </script>

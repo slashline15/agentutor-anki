@@ -30,6 +30,24 @@ def has_cloze(s):
     return bool(re.search(r"\{\{c\d+::", str(s or "")))
 
 
+# Linguagens que mudam o realce (python/js já são o modo padrão dos templates)
+LANG_ALIASES = {
+    "bash": "bash", "sh": "bash", "shell": "bash", "zsh": "bash",
+    "powershell": "powershell", "ps": "powershell", "ps1": "powershell",
+    "pwsh": "powershell",
+}
+
+
+def lang_marker(card):
+    """Marcador invisível de linguagem para o tokenizer dos templates.
+
+    Vai SEMPRE num campo exibido que NÃO é alvo de {{type:...}} (senão a
+    comparação de digitação quebraria). Vazio para python/js (modo padrão).
+    """
+    lang = LANG_ALIASES.get(str(card.get("lang", "")).strip().lower(), "")
+    return f'<span data-lang="{lang}" hidden></span>' if lang else ""
+
+
 def deck_id(slug):
     """ID de deck determinístico por slug (crc32, não o hash() salgado do
     Python — o mesmo baralho tem sempre o mesmo ID entre execuções)."""
@@ -55,17 +73,20 @@ def card_to_fields(card):
         code, ans = card.get("code", ""), card.get("answer", "")
         if not code or ans == "":
             return None
-        return "code_output", [nl2br(code), nl2br(ans), ex]
+        # marcador no Codigo (exibido); o typed é Saida
+        return "code_output", [lang_marker(card) + nl2br(code), nl2br(ans), ex]
     if t == "code_write":
         front, ans = card.get("front", ""), card.get("answer", "")
         if not front or not ans:
             return None
-        return "code_write", [nl2br(front), nl2br(ans), ex]
+        # marcador na Pergunta (exibida); o Codigo é o typed — não pode marcar
+        return "code_write", [lang_marker(card) + nl2br(front), nl2br(ans), ex]
     if t == "code_cloze":
         code = card.get("code", "")
         if not has_cloze(code):
             return None
-        return "code_cloze", [nl2br(code), ex]
+        # marcador no Front (só os trechos de cloze são comparados)
+        return "code_cloze", [lang_marker(card) + nl2br(code), ex]
     if t == "vocab":
         term, meaning = card.get("term", ""), card.get("meaning", "")
         if not term or not meaning:

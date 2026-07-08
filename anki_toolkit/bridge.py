@@ -105,6 +105,20 @@ def _model_payload(key):
     }
 
 
+def update_model(key, url=DEFAULT_URL):
+    """Atualiza templates e CSS de um note type JÁ existente na coleção
+    (usado após regenerar os HTML com build_templates.py)."""
+    m = _models.build_models()[key]
+    invoke("updateModelTemplates", {"model": {
+        "name": m.name,
+        "templates": {t["name"]: {"Front": t["qfmt"], "Back": t["afmt"]}
+                      for t in m.templates},
+    }}, url=url)
+    invoke("updateModelStyling", {"model": {"name": m.name, "css": m.css}},
+           url=url)
+    return m.name
+
+
 def ensure_models(types, url=DEFAULT_URL):
     """Cria na coleção os note types de `types` que ainda não existem.
 

@@ -1,25 +1,3 @@
-<!-- ============ NOTE TYPE: 1) Terminal Python (Cloze) — FRENTE ============ -->
-<div class="term">
-  <div class="term-title">
-    <span>python@dev:~</span>
-    <div class="win-controls"><span class="dot green"></span><span class="dot yellow"></span><span class="dot red"></span></div>
-  </div>
-  <div class="term-menu"><span>File</span><span>Edit</span><span>View</span><span>Run</span><span>Terminal</span><span>Help</span></div>
-  <div class="term-body">
-    <div class="prompt-line">
-      <span class="p-user">python@dev</span><span class="p-at">@</span><span class="p-host">localhost</span><span class="p-colon">:</span><span class="p-path">~</span><span class="p-dollar">$</span>python code.py
-    </div>
-    <div class="code-wrap">
-      <div class="gutter" id="gutter"></div>
-      <div class="code" id="code">{{cloze:Front}}</div>
-    </div>
-  </div>
-</div>
-
-<div style="max-width:820px;margin:0 auto;">{{type:cloze:Front}}</div>
-
-<script>
-// ==== TOKENIZER:BEGIN — gerado de templates/tokenizer.js; edite lá e rode build_templates.py ====
 /* ==========================================================================
    tokenizer.js — FONTE ÚNICA do realce de sintaxe dos templates de terminal.
    NÃO edite o bloco injetado nos front/back.html: edite ESTE arquivo e rode
@@ -186,6 +164,3 @@ var TermHl = (function () {
 
 /* para testes em Node (não roda no Anki) */
 if (typeof module !== 'undefined' && module.exports) { module.exports = TermHl; }
-// ==== TOKENIZER:END ====
-TermHl.run({cloze:true, focus:true});
-</script>
